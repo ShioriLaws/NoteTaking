@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音声支出入力</title>
+</head>
+<body>
+  <h1>🎙️ 支出を音声で記録</h1>
+  <button id="start-button">🎤 話す</button>
+  <p id="transcript"></p>
+  <script>
+    const button = document.getElementById('start-button');
+    const transcript = document.getElementById('transcript');
+
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'ja-JP';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    button.onclick = () => {
+      recognition.start();
+      transcript.textContent = '🎧 聞き取り中...';
+    };
+
+    recognition.onresult = (event) => {
+      const speech = event.results[0][0].transcript;
+      transcript.textContent = `✅ 入力: ${speech}`;
+
+      // 柔軟に用途と金額を検出（例: "クリーニング49352 9.72ドル" または "クリーニング 9.36ドル"）
+      const regex = /(.+?)\s*([0-9]+(?:\.[0-9]+)?)\s*ドル?/;
+      const match = speech.match(regex);
+
+      if (match) {
+        const category = match[1].trim();
+        const amount = match[2];
+
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const date = `${year}/${month}/${day}`;
+
+        fetch('https://script.google.com/macros/s/AKfycbwaKEMBnFE5PrL4HXvKIIQrUFUo6kTRWKe7jha3dz2C8K5fDOvjYAJQ6XnVDfA0e5qi/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, category, amount })
+        });
+
+        transcript.textContent += `\n📤 送信しました：${date} - ${category} - ${amount}ドル`;
+      } else {
+        transcript.textContent += '\n⚠️ 認識失敗または形式が不明です。例："クリーニング49352 9.72ドル" または "クリーニング 9.36ドル"';
+      }
+    };
+  </script>
+</body>
+</html>

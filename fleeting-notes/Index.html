@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音声ノート記録</title>
+  <style>
+    #start-button {
+      font-size: 2rem;
+      padding: 20px 40px;
+      margin: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Fleeting Notes</h1>
+  <button id="start-button">🎤 話し始める</button>
+  <p id="transcript"></p>
+  <script>
+    const button = document.getElementById('start-button');
+    const transcript = document.getElementById('transcript');
+
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'ja-JP';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    let finalTranscript = '';
+    let silenceTimer;
+
+    button.onclick = () => {
+      finalTranscript = '';
+      recognition.start();
+      transcript.textContent = '🎧 聞き取り中...';
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      transcript.textContent = `✅ 入力: ${finalTranscript} ${interim}`;
+
+      // 無言検知タイマーをリセット
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        recognition.stop();
+        saveNote(finalTranscript.trim());
+      }, 2500); // 2.5秒無言で送信
+    };
+
+    recognition.onerror = (event) => {
+      console.error('エラー:', event.error);
+    };
+
+    function saveNote(content) {
+      if (!content) return;
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const date = `${year}/${month}/${day}`;
+
+      fetch('https://script.google.com/macros/s/AKfycbwNJjeeYIONrEwFIXs2ATKTZnyPOnktXbY_NUVFKXiTrW_TigxNKahmQtJgxe-EmAW8/exec', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, note: content })
+      });
+
+      transcript.textContent += `\n📤 送信しました：${date} - ${content}`;
+    }
+  </script>
+</body>
+</html>
