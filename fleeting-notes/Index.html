@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>音声ノート記録</title>
+  <title>Fleeting Notes</title>
   <style>
-    #start-button {
+    #start-button, #send-button {
       font-size: 2rem;
       padding: 20px 40px;
       margin: 20px;
@@ -15,9 +15,11 @@
 <body>
   <h1>🎙️ Fleeting Notes</h1>
   <button id="start-button">🎤 話し始める</button>
+  <button id="send-button">📤 すぐ送信</button>
   <p id="transcript"></p>
   <script>
     const button = document.getElementById('start-button');
+    const sendButton = document.getElementById('send-button');
     const transcript = document.getElementById('transcript');
 
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -34,6 +36,11 @@
       transcript.textContent = '🎧 聞き取り中...';
     };
 
+    sendButton.onclick = () => {
+      recognition.stop();
+      saveNote(finalTranscript.trim());
+    };
+
     recognition.onresult = (event) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -46,12 +53,11 @@
       }
       transcript.textContent = `✅ 入力: ${finalTranscript} ${interim}`;
 
-      // 無言検知タイマーをリセット
       if (silenceTimer) clearTimeout(silenceTimer);
       silenceTimer = setTimeout(() => {
         recognition.stop();
         saveNote(finalTranscript.trim());
-      }, 2000); // 2秒無言で送信 // 2.5秒無言で送信
+      }, 2000); // 2秒無言で送信
     };
 
     recognition.onerror = (event) => {
